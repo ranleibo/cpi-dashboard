@@ -1,0 +1,196 @@
+דילוג לתוכן הראשיעזרה בנושא נגישות
+גביע העולם בכדורגל 2026: אומנות המסירה הארוכה
+.github\workflows\update_data.yml
+
+
+מצב AI
+הכול
+סרטונים
+תמונות
+שופינג
+סרטונים קצרים
+חדשות
+עוד
+כלים
+publicbodies/.github/workflows/update_data.yml at main · ...
+
+GitHub
+https://github.com › publicbodies › blob
+·
+לדף המתורגם
+A database of public bodies such as government departments, ministries etc. - publicbodies/.github/workflows/update_data.yml at main · datasets/publicbodies.
+סקירת AI
+
+
++7
+It looks like you shared a file path for a GitHub Actions workflow: .github/workflows/update_data.yml. This path is typically used to automate data updates, web scraping, or api fetching in a GitHub repository. 
+Because you only provided the file path, I am not sure exactly what you need.
+Common Use Cases for update_data.yml
+Scheduled Scraping: Running a Python script every day to fetch new data.
+API Integration: Pulling the latest statistics from an external API.
+Profile Readme Updates: Refreshing dynamic content on your GitHub profile.
+Data Committing: Automatically pushing updated JSON or CSV files back to the repository. 
+Example Workflow Configuration
+If you need a starting template, here is a robust, standard setup that runs on a schedule, fetches data using a script, and commits the changes back to your repository: 
+yaml
+name: Update Data
+
+on:
+  schedule:
+    # Runs every day at midnight UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Allows manual triggering via the GitHub UI
+
+jobs:
+  update-repo-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository code
+      uses: actions/checkout@v4
+
+    - name: Set up Python environment
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+        cache: 'pip' # Speeds up subsequent runs if you use requirements.txt
+
+    - name: Install required dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Execute data update script
+      run: |
+        python update_script.py
+
+    - name: Commit and push changes if data updated
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@://github.com'
+        git add .
+        git diff-index --quiet HEAD || git commit -m "chore: automated data update"
+        git push
+השתמש בקוד בזהירות.
+To help you build or fix this specific file, could you tell me:
+What programming language or script are you running to update the data?
+How frequently does the data need to update (hourly, daily, weekly)?
+Are you encountering a specific error message in your current workflow runs?
+Once I know your goals, I can write the exact YAML code you need.
+GitHub - opendatacube/release-tracker
+The update_releases.py script fetches the latest version information and generates the releases. json and index. html files. The G...
+
+GitHub
+How to Automate Daily Content Updates on a Real Estate Website Using GitHub Actions? · community · Discussion #180546 · GitHub
+28 בנוב׳ 2025 — Create a file at . github ( GitHub, Inc ) /workflows/daily-update. yml with this content - it will fetch property data on a schedu...
+
+GitHub
+Tracking AI Model Deprecations with Git Scraping: Introducing deprecations.info
+24 באוג׳ 2025 — The service is built with Python and uses GitHub Actions for scheduling. The scraper ( view on GitHub) runs daily, checking each p...
+
+leblancfg.com
+Workflow Action - Update Custom Values
+13 בינו׳ 2025 — Integrating with APIs: Automatically update custom values using incoming data from external APIs. Example: Update a "Last API Sync...
+
+
+HighLevel Support Portal
+Go Automate Your GitHub Profile README | by Victoria Drake | Better Programming
+5 באוג׳ 2020 — Congratulations and welcome to the cool kids' club! You now know how to build an auto-updating GitHub profile README. You may now ...
+
+
+Medium
+How to automatically display your latest posts (from multiple RSS feeds) on your GitHub profile
+24 ביולי 2023 — GitHub profile READMEs are a relatively new addition (2020), letting devs add a little description of themselves, and even display...
+
+
+blog.jakelee.co.uk
+Implementing GitHub Actions continuous integration to reduce error rates in ecological data collection
+28 בספט׳ 2022 — The data technicians then push the data. csv spreadsheet to the GitHub repository, at which point GitHub Actions CI is automatical...
+
+
+besjournals
+Creating Custom Github Actions for the new Entra Inbound Provisioning API for automatic user provisioning
+25 בנוב׳ 2023 — We can use this action in a standard workflow that runs on a schedule.
+
+
+GitHub
+Standard Ruby · Actions · GitHub Marketplace
+Standard Ruby GitHub Action Runs bundle exec standardrb --fix on the root directory of your repo If any errors were auto-fixable, ...
+
+GitHub
+כאן אפשר לשאול מה שרוצים
+
+
+update_data.yml - sandialabs.github.io
+
+GitHub
+https://github.com › .github › workflows
+·
+לדף המתורגם
+name: Sandia Page Nightly Update on: push: branches: - main schedule: - cron: '0 3 * * *' workflow_dispatch: inputs: git-ref: description: Git Hash ...
+Workflow syntax for GitHub Actions
+
+GitHub Docs
+https://docs.github.com › using-workflows
+·
+לדף המתורגם
+Workflow files use YAML syntax, and must have either a .yml or .yaml file extension. If you're new to YAML and want to learn more, see Learn YAML in Y minutes.
+update-workflows.yml - extension-template
+
+GitHub
+https://github.com › blob › main › .github
+·
+לדף המתורגם
+A `copier` template for JupyterLab extensions. Contribute to jupyterlab/extension-template development by creating an account on GitHub.
+YAML Update Action - GitHub Marketplace
+
+GitHub
+https://github.com › marketplace › actions
+·
+לדף המתורגם
+Update values in an existing YAML or JSON File. Push this updated File to an existing branch or create a new branch. Open a PullRequest to a configurable ...
+GitHub Action that updates the workflow file of another Action
+
+Stack Overflow
+3 תשובות · לפני 4 שנים
+I have two GitHub Actions in the same repo. I'm trying to update one from the other, but I get the following error when trying to commit and push the changes: ...
+3 תשובות
+ 
+·
+ 
+התשובה המובילה: 
+You need to use a Personal Access Token with workflows permission here, instead of the GITHUB_TOKEN ...
+update_data.yaml - metakgp.org
+
+GitHub
+https://github.com › .github › workflows
+·
+לדף המתורגם
+The website for metaKGP. Showcases all metaKGP projects since it is more than just a Wiki. - metakgp.org/.github/workflows/update_data.yaml at main ...
+Understanding GitHub Actions Workflow Files (YAML ...
+
+Medium · Amaresh Pelleti
+לפני 9 חודשים
+This will help readers deeply understand the structure of workflows (.yml files), which is critical for customizing pipelines.
+Sync Keep Workflows With Github Action
+
+Keep - Open-source AIOps platform
+https://docs.keephq.dev › cli › github-acti...
+·
+לדף המתורגם
+To set up this workflow in your repository: Add the workflow YAML file to your repository under .github/workflows/ . Set your Keep API Key and URL as secrets ...
+1	
+2
+3
+4
+5
+6
+7
+8
+9
+10
+הבא
+התוצאות לא מותאמות אישית
+ישראל
+פתח תקווה - מכתובת ה-IP שלך
+ - לעדכון המיקום
+עזרהשליחת משובפרטיותתנאים
