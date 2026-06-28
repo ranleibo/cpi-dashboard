@@ -201,13 +201,6 @@ tbody td{padding:9px 12px;text-align:right;color:var(--t2);white-space:nowrap;fo
   </div>
 </header>
 
-<div class="country-bar">
-  <span class="country-bar-label">מדינה:</span>
-  <button class="cc-btn active" data-cc="IL" onclick="setCountry('IL')">🇮🇱 ישראל</button>
-  <button class="cc-btn" data-cc="CA" onclick="setCountry('CA')">🇨🇦 קנדה</button>
-  <button class="cc-btn" data-cc="PL" onclick="setCountry('PL')">🇵🇱 פולין</button>
-  <button class="cc-btn" data-cc="BE" onclick="setCountry('BE')">🇧🇪 בלגיה</button>
-</div>
 
 <main class="main">
   <div class="notice" id="notice">
@@ -451,45 +444,6 @@ const COUNTRIES = {
       2015:87.05,2016:86.79,2017:87.05,2018:88.2220,2019:88.5047,
       2020:87.9736,2021:90.0742,2022:94.7397
     },
-  },
-
-  CA: {
-    name: 'קנדה', flag: '🇨🇦',
-    agency: 'Statistics Canada',
-    agencyShort: 'StatCan',
-    canRefresh: false,
-    bases: [{v:100.0, label:'2024=100'}],
-    displayBase: 100.0,
-    annual: [],
-    quarterly: [],
-    monthly_exp: [],
-    nov_anchors: null,
-  },
-
-  PL: {
-    name: 'פולין', flag: '🇵🇱',
-    agency: 'GUS — Główny Urząd Statystyczny',
-    agencyShort: 'GUS',
-    canRefresh: false,
-    bases: [{v:100.0, label:'2024=100'}],
-    displayBase: 100.0,
-    annual: [],
-    quarterly: [],
-    monthly_exp: [],
-    nov_anchors: null,
-  },
-
-  BE: {
-    name: 'בלגיה', flag: '🇧🇪',
-    agency: 'Statbel — Statistics Belgium',
-    agencyShort: 'Statbel',
-    canRefresh: false,
-    bases: [{v:100.0, label:'2024=100'}],
-    displayBase: 100.0,
-    annual: [],
-    quarterly: [],
-    monthly_exp: [],
-    nov_anchors: null,
   },
 
 }; // end COUNTRIES
@@ -826,20 +780,6 @@ function setCountry(code){
 }
 
 // ── DIRECT API PARSERS (browser-side, no proxy) ───────────────
-function parseEurostat(data){
-  const timeIndex=data.dimension.time.category.index;
-  const values=data.value;
-  const monthly=[];
-  for(const [period,i] of Object.entries(timeIndex)){
-    const val=values[String(i)];
-    if(val===null||val===undefined) continue;
-    const [yr,mo]=period.split('-');
-    monthly.push([`01.${mo}.${yr}`,Math.round(val*10000)/10000]);
-  }
-  monthly.sort((a,b)=>{const[,ma,ya]=a[0].split('.');const[,mb,yb]=b[0].split('.');return(+yb-+ya)||(+mb-+ma);});
-  return monthly;
-}
-
 function parseOECD(data){
   // Handle both old (stats.oecd.org) and new (sdmx.oecd.org) SDMX-JSON formats
   const d=data.data||data;
@@ -881,24 +821,6 @@ function moToQtr(monthly){
   return Object.values(qd).sort((a,b)=>a.q<b.q?1:-1);
 }
 
-function parseStatsCan(raw){
-  // Statistics Canada WDS API — returns array of vector responses
-  // Base year 2002=100; we rebase to 2015=100 for consistency
-  const obj=Array.isArray(raw)?raw[0].object:(raw.object[0]||raw.object);
-  const pts=obj.vectorDataPoint||[];
-  const monthly=[];
-  for(const pt of pts){
-    if(pt.value==null) continue;
-    const[yr,mo]=String(pt.refPer).split('-');
-    monthly.push([`01.${mo}.${yr}`,+pt.value]);
-  }
-  monthly.sort((a,b)=>{const[,ma,ya]=a[0].split('.');const[,mb,yb]=b[0].split('.');return(+yb-+ya)||(+mb-+ma);});
-  // Rebase 2002=100 → 2015=100
-  const ref=monthly.find(r=>r[0]==='01.01.2015');
-  if(ref){const b=ref[1];return monthly.map(([d,v])=>[d,Math.round(v/b*100*10000)/10000]);}
-  return monthly;
-}
-
 async function tryFetch(url,timeout){
   const r=await fetch(url,{signal:AbortSignal.timeout(timeout||18000)});
   if(!r.ok) throw new Error('HTTP '+r.status);
@@ -911,48 +833,6 @@ function rebaseILFromOECD(monthly){
   if(!nov2024) return monthly;
   const factor=101.19/nov2024[1];
   return monthly.map(([d,v])=>[d,Math.round(v*factor*10000)/10000]);
-}
-
-async function fetchDirectAPI(country){
-  // 1st: proxy (works from file://, handles SSL, most reliable)
-  try{
-    const res=await fetch(`http://localhost:3001/api/cpi?country=${country}`,{signal:AbortSignal.timeout(15000)});
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const data=await res.json();
-    if(data.error) throw new Error(data.error);
-    return data;
-  }catch(proxyErr){
-    console.warn('Proxy unavailable, trying direct API:',proxyErr.message);
-  }
-
-  // 2nd: direct browser fetch (works from http://, may be blocked from file://)
-  let monthly;
-  if(country==='CA'){
-    try{
-      const raw=await tryFetch('https://www150.statcan.gc.ca/t1/tbl1/en/dtbl!18100004/v41690973/200/json');
-      monthly=parseStatsCan(raw);
-      if(monthly.length<12) throw new Error('too few rows');
-    }catch(e1){
-      console.warn('Stats Canada failed:',e1.message);
-      try{
-        const raw=await tryFetch('https://sdmx.oecd.org/public/rest/data/OECD.SDD.TPS,DSD_PRICES@DF_PRICES_ALL,1.0/CAN.M.CPI.IX.._T.N.?startPeriod=2009-01&format=jsondata');
-        monthly=parseOECD(raw);
-        if(monthly.length<12) throw new Error('too few rows');
-      }catch(e2){
-        console.warn('New OECD failed:',e2.message);
-        const raw=await tryFetch('https://stats.oecd.org/sdmx-json/data/PRICES_CPI/CAN.CPALTT01.IXOB.M/all?startTime=2009-01&dimensionAtObservation=allDimensions');
-        monthly=parseOECD(raw);
-      }
-    }
-  } else {
-    const url=`https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/prc_hicp_midx?format=JSON&unit=I15&coicop=CP00&geo=${country}&sinceTimePeriod=2009-01&lang=en`;
-    const raw=await tryFetch(url);
-    monthly=parseEurostat(raw);
-  }
-  if(!monthly.length) throw new Error('no data');
-  const annual=moToAnnual(monthly);
-  const quarterly=enrichQtr(moToQtr(monthly),annual);
-  return {source:'api',country,monthly,annual,quarterly};
 }
 
 // ── PERIOD CALCULATOR ─────────────────────────────────────────
@@ -1082,11 +962,6 @@ async function doRefresh(){
           apiData={source:'api',monthly,annual,quarterly:enrichQtr(moToQtr(monthly),annual)};
         }catch(e2){ console.warn('[IL] OECD:',e2.message); }
       }
-    } else {
-      try{ apiData=await fetchDirectAPI(ACTIVE_COUNTRY); }
-      catch(e){ console.warn('['+ACTIVE_COUNTRY+'] API:',e.message); }
-    }
-
     if(apiData&&apiData.monthly&&apiData.monthly.length){
       // Only add months newer than what we already have
       const newMonths=latestKnown
@@ -1129,44 +1004,27 @@ function setTs(){
 
 // ── INIT ──────────────────────────────────────────────────────
 async function initDashboard() {
-  // Try to load JSON data files generated by GitHub Actions (data/XX.json).
-  // IL: merge OECD historical months not yet in hardcoded CBS data (CBS takes priority).
-  // CA/PL/BE: replace entirely with API data (no hardcoded data for those).
-  const codes = Object.keys(COUNTRIES);
-  await Promise.allSettled(codes.map(async (code) => {
-    try {
-      const res = await fetch(`data/${code}.json`);
-      if (!res.ok) return;
+  // Try to extend IL monthly history with OECD data from GitHub Actions (data/IL.json).
+  // CBS hardcoded values always take priority over OECD data.
+  try {
+    const res = await fetch('data/IL.json');
+    if (res.ok) {
       const d = await res.json();
-      const c = COUNTRIES[code];
-
-      if (code === 'IL') {
-        // IL: extend monthly history with OECD data; CBS hardcoded values take priority
-        if (d.monthly && d.monthly.length) {
-          const existing = new Set(c.monthly_exp.map(r => r[0]));
-          const older = d.monthly.filter(r => !existing.has(r[0]));
-          if (older.length) {
-            c.monthly_exp = [...c.monthly_exp, ...older]
-              .sort((a, b) => {
-                const [,ma,ya] = a[0].split('.');
-                const [,mb,yb] = b[0].split('.');
-                return (+yb - +ya) || (+mb - +ma);
-              });
-          }
+      const c = COUNTRIES['IL'];
+      if (d.monthly && d.monthly.length) {
+        const existing = new Set(c.monthly_exp.map(r => r[0]));
+        const older = d.monthly.filter(r => !existing.has(r[0]));
+        if (older.length) {
+          c.monthly_exp = [...c.monthly_exp, ...older]
+            .sort((a, b) => {
+              const [,ma,ya] = a[0].split('.');
+              const [,mb,yb] = b[0].split('.');
+              return (+yb - +ya) || (+mb - +ma);
+            });
         }
-        // Keep hardcoded annual/quarterly for IL (CBS-verified)
-      } else {
-        // Non-IL: use API data entirely
-        if (d.annual    && d.annual.length)    c.annual      = d.annual;
-        if (d.quarterly && d.quarterly.length) c.quarterly   = d.quarterly;
-        if (d.monthly   && d.monthly.length)   c.monthly_exp = d.monthly;
-        if (d.bases     && d.bases.length)     c.bases       = d.bases;
-        if (d.displayBase)                     c.displayBase = d.displayBase;
       }
-    } catch (_) {
-      // JSON not available — fall back to hardcoded data silently
     }
-  }));
+  } catch (_) {}
   setCountry('IL');
   setTs();
 }
