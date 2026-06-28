@@ -96,11 +96,12 @@ def parse_eurostat(data):
 
 
 def parse_statscan(data):
-    """Statistics Canada WDS API → [["dd.mm.yyyy", idx], ...]  newest first."""   
-  if isinstance(obj, list):
-        obj = obj[0] if obj else {}
+    """Statistics Canada WDS API → [["dd.mm.yyyy", idx], ...]  newest first."""
+    if isinstance(data, list):          # Stats Canada sometimes wraps in a top-level array
+        data = data[0] if data else {}
     obj    = data.get('object', data)
-
+    if isinstance(obj, list):
+        obj = obj[0] if obj else {}
     points = obj.get('vectorDataPoint', [])
 
     monthly = []
