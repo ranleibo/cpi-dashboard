@@ -962,6 +962,7 @@ async function doRefresh(){
           apiData={source:'api',monthly,annual,quarterly:enrichQtr(moToQtr(monthly),annual)};
         }catch(e2){ console.warn('[IL] OECD:',e2.message); }
       }
+    }
     if(apiData&&apiData.monthly&&apiData.monthly.length){
       // Only add months newer than what we already have
       const newMonths=latestKnown
