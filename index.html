@@ -290,7 +290,7 @@ tbody td{padding:9px 12px;text-align:right;color:var(--t2);white-space:nowrap;fo
   <div class="card card-monthly">
     <div class="ch">
       <div class="bar"></div>
-      <span class="ch-title" id="mo-title">מדד חודשי לפי בסיסים — 15 שנה</span>
+      <span class="ch-title" id="mo-title">מדד חודשי לפי בסיסים</span>
       <span class="ch-count" id="mc">—</span>
       <button class="btn-xl" onclick="exportMonthly()">⬇ Excel</button>
     </div>
@@ -535,6 +535,10 @@ function renderQuarterly(){
 function renderMonthly(){
   const maxI=Math.max(...ALL_MO.map(r=>r[1]));
   document.getElementById('mc').textContent=ALL_MO.length+' חודשים';
+  if(ALL_MO.length>1){
+    const ny=+ALL_MO[0][0].split('.')[2], oy=+ALL_MO[ALL_MO.length-1][0].split('.')[2];
+    document.getElementById('mo-title').textContent=`מדד חודשי לפי בסיסים — ${ny-oy+1} שנה`;
+  }
   // Rebuild header dynamically
   document.getElementById('mo-head-tr').innerHTML=
     '<th>תאריך</th>'+
@@ -720,8 +724,7 @@ function setCountry(code){
     : BASES;
 
   // Update column headers
-  document.getElementById('mo-title').textContent =
-    c.nov_anchors ? 'מדד חודשי לפי בסיסים — 15 שנה' : 'מדד חודשי לפי בסיסים';
+  document.getElementById('mo-title').textContent = 'מדד חודשי לפי בסיסים';
   const dispBObj = BASES.find(b => Math.abs(b.v - DISPLAY_BASE) < 0.01) || BASES[BASES.length-1];
   const dispLbl = dispBObj.label;
   document.getElementById('ann-idx-hdr').textContent = `מדד (${dispLbl})`;
