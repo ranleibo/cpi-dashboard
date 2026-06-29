@@ -24,6 +24,7 @@ run_pptx.ps1
 setup_autostart.ps1
 start_proxy.ps1
 lovable_prompt.md
+*.md
 food-tracker.html
 insurance-tracker.html
 
