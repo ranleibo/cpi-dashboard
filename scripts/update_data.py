@@ -5,7 +5,7 @@ Fetches CPI data from official sources and writes JSON files to data/ directory.
 Runs daily via .github/workflows/update_data.yml
 
 Sources:
-  IL  — OECD (ISR), rebased to CBS anchor Nov-2024 = 101.19
+  IL  — FRED ISRCPIALLMINMEI (OECD via FRED, 2015=100), rebased to CBS anchor Nov-2024 = 101.19
   CA  — Statistics Canada WDS API (2002=100 → rebased to 2015=100); OECD fallback
   PL  — Eurostat HICP (2015=100)
   BE  — Eurostat HICP (2015=100)
@@ -19,6 +19,11 @@ import urllib.request
 from datetime import datetime
 
 # ── API endpoints ─────────────────────────────────────────────────────────────
+BOI_PRI_URL = (
+    'https://edge.boi.gov.il/FusionEdgeServer/sdmx/v2/data/dataflow/'
+    'BOI.STATISTICS/PRI/1.0?startPeriod=2009-01'
+)
+
 OECD_NEW_URL = (
     'https://sdmx.oecd.org/public/rest/data/'
     'OECD.SDD.TPS,DSD_PRICES@DF_PRICES_ALL,1.0/'
@@ -138,12 +143,38 @@ def rebase_statscan_to_2015(monthly):
 
 
 def rebase_il_oecd_to_cbs(monthly):
-    """OECD Israel (2015=100) → CBS base (Nov-2024 = 101.19)."""
+    """OECD/FRED Israel (2015=100) → CBS base (Nov-2024 = 101.19)."""
     nov2024 = next((v for d, v in monthly if d == '01.11.2024'), None)
     if not nov2024:
         return monthly
     factor = CBS_NOV2024_ANCHOR / nov2024
     return [[d, round(v * factor, 4)] for d, v in monthly]
+
+
+def parse_boi_cpi_xml(xml_text):
+    """BOI SDMX XML (PRI dataflow) → total CPI index [["dd.mm.yyyy", idx], ...] newest first.
+    Looks for SERIES_CODE="CP" UNIT_MEASURE="I24_L" FREQ="M" ADJUSTMENT="N" (2024=100 base).
+    """
+    monthly = []
+    for series_chunk in xml_text.split('<Series ')[1:]:
+        if ('SERIES_CODE="CP"' in series_chunk
+                and 'UNIT_MEASURE="I24_L"' in series_chunk
+                and 'FREQ="M"' in series_chunk
+                and 'ADJUSTMENT="N"' in series_chunk):
+            for obs in series_chunk.split('<Obs ')[1:]:
+                try:
+                    t_start = obs.index('TIME_PERIOD="') + 13
+                    t_end   = obs.index('"', t_start)
+                    v_start = obs.index('OBS_VALUE="') + 11
+                    v_end   = obs.index('"', v_start)
+                    period  = obs[t_start:t_end]
+                    yr, mo  = period.split('-')
+                    monthly.append([f'01.{mo}.{yr}', round(float(obs[v_start:v_end]), 4)])
+                except (ValueError, IndexError):
+                    continue
+            break
+    monthly.sort(key=lambda x: (x[0][6:], x[0][3:5]), reverse=True)
+    return monthly
 
 
 # ── Build annual / quarterly from monthly ─────────────────────────────────────
@@ -211,17 +242,21 @@ def enrich_quarterly(quarters, annual):
 
 # ── Per-country fetch functions ───────────────────────────────────────────────
 def fetch_il():
-    """Israel: OECD ISR API, rebased to CBS anchor."""
-    raw     = fetch_json(OECD_NEW_URL.format(country='ISR'))
-    monthly = parse_oecd_cpi(raw)
+    """Israel: Bank of Israel SDMX (PRI/CP series), 2024=100 base — same source as CBS."""
+    req     = urllib.request.Request(BOI_PRI_URL, headers={
+        'User-Agent': 'Mozilla/5.0 CPIDashboard/1.0',
+        'Accept':     'application/xml,*/*',
+    })
+    with urllib.request.urlopen(req, timeout=60) as r:
+        xml_text = r.read().decode('utf-8', 'ignore')
+    monthly = parse_boi_cpi_xml(xml_text)
     if len(monthly) < 12:
-        raise ValueError(f'OECD ISR: only {len(monthly)} rows')
-    monthly = rebase_il_oecd_to_cbs(monthly)
+        raise ValueError(f'BOI PRI/CP: only {len(monthly)} rows')
     annual  = monthly_to_annual(monthly)
     qtr     = enrich_quarterly(monthly_to_quarterly(monthly), annual)
-    print(f'[IL] OECD ISR: {len(monthly)} months, {len(annual)} years')
+    print(f'[IL] BOI PRI/CP (2024=100): {len(monthly)} months, {len(annual)} years')
     return {
-        'source':    'OECD (ISR) rebased to CBS Nov-2024=101.19',
+        'source':    'Bank of Israel SDMX — PRI/CP series (2024=100, sourced from CBS)',
         'country':   'IL',
         'updated':   datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
         'annual':    annual,
