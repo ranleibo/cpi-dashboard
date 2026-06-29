@@ -1,0 +1,39 @@
+# Node
+node_modules/
+package.json
+package-lock.json
+manifest.json
+skills-lock.json
+sw.js
+
+# Local working copy (index.html is the git version)
+cpi_dashboard.html
+
+# Claude Code config
+.claude/
+
+# Local tools not part of the dashboard
+BP_Consolidator/
+Charge_station_BP/
+consolidation report project/
+build_presentation.js
+cbs_proxy.py
+create_presentation.ps1
+delete_bac_files.py
+run_pptx.ps1
+setup_autostart.ps1
+start_proxy.ps1
+lovable_prompt.md
+food-tracker.html
+insurance-tracker.html
+
+# Personal/office files
+*.xlsx
+*.xls
+*.pdf
+*.bat
+*.jpg
+*.jpeg
+*.png
+*.pptx
+*.docx
